@@ -22583,6 +22583,7 @@ transcriptionData.transcription.partialResults.forEach(result => {
             const wordInfo = words[wordIndex];
             const span = document.createElement('span');
             span.textContent = displayWord + ' ';
+            span.contentEditable = 'true';
             span.dataset.offset = wordInfo.offset / 10000000; // Convert to seconds
             span.dataset.duration = wordInfo.duration / 10000000; // Convert to seconds
             span.dataset.confidence = wordInfo.confidence; // Store confidence level
@@ -22594,7 +22595,7 @@ transcriptionData.transcription.partialResults.forEach(result => {
             }
 
             // Add click event listener to each span
-            span.addEventListener('click', () => {
+            span.addEventListener('dblclick', () => {
                 video.currentTime = parseFloat(span.dataset.offset);
             });
 
