@@ -17,12 +17,19 @@ body {
     justify-content: center;
 }
 
+.main-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
 h1 {
     margin: 10px auto;
 }
 
 h3 {
     font-size: 16px;
+    color: dodgerblue;
 }
 
 p {
@@ -34,6 +41,20 @@ video {
     width: 700px;
 }
 
+button {
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    height: 30px;
+    margin-top: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    filter: brightness(1.1);
+}
+
 .transcription-container {
     background: white;
     height: 500px;
@@ -43,7 +64,7 @@ video {
     margin-top: 10px;
 }
 
-.transcription {
+.text-container, .vtt-container {
     white-space: pre-wrap;
     font-family: Arial, sans-serif;
     font-size: 16px;
@@ -52,15 +73,15 @@ video {
     padding: 15px;
 }
 
-.transcription span {
+.text-container span,
+.vtt-container span {
     cursor: pointer;
     color: #A0A0A0;
-    /* Medium grey */
 }
 
-.transcription .highlight {
+.text-container .highlight,
+.vtt-container .highlight {
     color: #000000;
-    /* Close to black */
 }
 
 .low-confidence {

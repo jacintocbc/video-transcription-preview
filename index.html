@@ -12,11 +12,15 @@
         <section class="main-section">
             <div class="video-container">
                 <h1>BC Wildfire</h1>
-                <video src="video-sample.mp4" controls></video>
+                <video id="video" controls>
+                    <source src="video-sample.mp4" type="video/mp4">
+                    <track kind="captions" src="video-sample.vtt" srclang="en" label="English" default>
+                </video>
             </div>
+            <button id="toggleView">Toggle View</button>
             <div class="transcription-container">
-                <div class="transcription">                    
-                </div>
+                <div id="textMode" class="text-container"></div>
+                <div id="vttMode" class="vtt-container"></div>
             </div>
         </section>
     </div>

@@ -22550,8 +22550,60 @@ const transcriptionData = {
     }
 }
 
-const video = document.querySelector('video');
-const transcriptionContainer = document.querySelector('.transcription');
+const video = document.getElementById('video');
+const textContainer = document.getElementById('textMode');
+const vttContainer = document.getElementById('vttMode');
+const toggleViewButton = document.getElementById('toggleView');
+let isTextMode = true;
+
+// Create text mode content
+function createTextMode() {
+    textContainer.innerHTML = '';
+    transcriptionData.transcription.partialResults.forEach(result => {
+        const text = result.nBest[0].display;
+        const words = result.nBest[0].words;
+        const startTime = result.offset / 10000000; // Convert to seconds
+        const duration = result.duration / 10000000; // Convert to seconds
+        const endTime = startTime + duration;
+
+        const header = document.createElement('h3');
+        header.textContent = `${formatTime(startTime)} - ${formatTime(endTime)}`;
+        textContainer.appendChild(header);
+
+        const paragraph = document.createElement('p');
+        
+        let wordIndex = 0;
+        const textWords = text.split(/\s+/);
+
+        textWords.forEach(displayWord => {
+            if (wordIndex < words.length) {
+                const wordInfo = words[wordIndex];
+                const span = document.createElement('span');
+                span.textContent = displayWord + ' ';
+                span.contentEditable = 'true';
+                span.dataset.offset = wordInfo.offset / 10000000; // Convert to seconds
+                span.dataset.duration = wordInfo.duration / 10000000; // Convert to seconds
+                span.dataset.confidence = wordInfo.confidence; // Store confidence level
+                span.classList.add('not-highlighted'); // Add class for initial styling
+
+                // Add class for low confidence words
+                if (wordInfo.confidence < 0.2) {
+                    span.classList.add('low-confidence');
+                }
+
+                // Add click event listener to each span
+                span.addEventListener('dblclick', () => {
+                    video.currentTime = parseFloat(span.dataset.offset);
+                });
+
+                paragraph.appendChild(span);
+                wordIndex++;
+            }
+        });
+
+        textContainer.appendChild(paragraph);
+    });
+}
 
 function formatTime(seconds) {
     const date = new Date(seconds * 1000);
@@ -22561,63 +22613,107 @@ function formatTime(seconds) {
     return `${hh}:${mm}:${ss}`;
 }
 
-// Render transcription with headers and highlighting for low confidence words
-transcriptionData.transcription.partialResults.forEach(result => {
-    const text = result.nBest[0].display;
-    const words = result.nBest[0].words;
-    const startTime = result.offset / 10000000; // Convert to seconds
-    const duration = result.duration / 10000000; // Convert to seconds
-    const endTime = startTime + duration;
+// Fetch and parse VTT file
+async function fetchVTT() {
+    const response = await fetch('./video-sample.vtt');
+    const vttText = await response.text();
+    return parseVTT(vttText);
+}
 
-    const header = document.createElement('h3');
-    header.textContent = `${formatTime(startTime)} - ${formatTime(endTime)}`;
-    transcriptionContainer.appendChild(header);
+function parseVTT(vttText) {
+    const sections = [];
+    const vttLines = vttText.split('\r\n\r\n'); // Split by double newline for each section
 
-    const paragraph = document.createElement('p');
-    
-    let wordIndex = 0;
-    const textWords = text.split(/\s+/);
-
-    textWords.forEach(displayWord => {
-        if (wordIndex < words.length) {
-            const wordInfo = words[wordIndex];
-            const span = document.createElement('span');
-            span.textContent = displayWord + ' ';
-            span.contentEditable = 'true';
-            span.dataset.offset = wordInfo.offset / 10000000; // Convert to seconds
-            span.dataset.duration = wordInfo.duration / 10000000; // Convert to seconds
-            span.dataset.confidence = wordInfo.confidence; // Store confidence level
-            span.classList.add('not-highlighted'); // Add class for initial styling
-
-            // Add class for low confidence words
-            if (wordInfo.confidence < 0.2) {
-                span.classList.add('low-confidence');
-            }
-
-            // Add click event listener to each span
-            span.addEventListener('dblclick', () => {
-                video.currentTime = parseFloat(span.dataset.offset);
-            });
-
-            paragraph.appendChild(span);
-            wordIndex++;
+    vttLines.forEach(section => {
+        const lines = section.split('\r\n'); // Split each section into individual lines
+        if (lines.length >= 3) {
+            const id = lines[0];
+            const [start, end] = lines[1].split(' --> ');
+            const text = lines.slice(2).join(' ');
+            const words = text.split(' ').map(word => word.trim());
+            sections.push({ id, start: start.trim(), end: end.trim(), words });
         }
     });
 
-    transcriptionContainer.appendChild(paragraph);
+    return sections;
+}
+
+// Create VTT mode content and copy data properties from text mode spans
+async function createVTTMode() {
+    const sections = await fetchVTT();
+    vttContainer.innerHTML = '';
+    let textSpans = document.querySelectorAll('#textMode span');
+    let textSpanIndex = 0;
+
+    sections.forEach(section => {
+        const header = document.createElement('h3');
+        header.textContent = `${section.start} - ${section.end}`;
+        vttContainer.appendChild(header);
+
+        const paragraph = document.createElement('p');
+
+        section.words.forEach(word => {
+            if (textSpanIndex < textSpans.length) {
+                const wordSpan = document.createElement('span');
+                wordSpan.contentEditable = true;
+                wordSpan.textContent = word + ' ';
+                
+                // Copy data properties from the corresponding text mode span
+                const textSpan = textSpans[textSpanIndex];
+                wordSpan.dataset.offset = textSpan.dataset.offset;
+                wordSpan.dataset.duration = textSpan.dataset.duration;
+                
+                wordSpan.addEventListener('dblclick', () => {
+                    video.currentTime = parseFloat(wordSpan.dataset.offset);
+                });
+
+                wordSpan.addEventListener('input', () => {
+                    // Update Captions
+                });
+
+                paragraph.appendChild(wordSpan);
+                textSpanIndex++;
+            }
+        });
+
+        vttContainer.appendChild(paragraph);
+    });
+}
+
+// Toggle view between text mode and VTT mode
+toggleViewButton.addEventListener('click', () => {
+    isTextMode = !isTextMode;
+    if (isTextMode) {
+        textContainer.style.display = 'block';
+        vttContainer.style.display = 'none';
+    } else {
+        textContainer.style.display = 'none';
+        vttContainer.style.display = 'block';
+    }
 });
 
-// Update highlighted words based on current video time
+// Highlight words as video plays
 video.addEventListener('timeupdate', () => {
     const currentTime = video.currentTime;
-    document.querySelectorAll('.transcription span').forEach(span => {
-        const wordStart = parseFloat(span.dataset.offset);
-        if (currentTime >= wordStart) {
-            span.classList.add('highlight');
-            span.classList.remove('not-highlighted');
-        } else {
-            span.classList.remove('highlight');
-            span.classList.add('not-highlighted');
-        }
-    });
+    if (isTextMode) {
+        document.querySelectorAll('#textMode span').forEach(span => {
+            const wordStart = parseFloat(span.dataset.offset);
+            if (currentTime >= wordStart) {
+                span.classList.add('highlight');
+                span.classList.remove('not-highlighted');
+            }
+        });
+    } else {
+        document.querySelectorAll('#vttMode span').forEach(span => {
+            const wordStart = parseFloat(span.dataset.offset);
+            if (currentTime >= wordStart) {
+                span.classList.add('highlight');
+                span.classList.remove('not-highlighted');
+            }
+        });
+    }
 });
+
+// Initial content creation
+createTextMode();
+createVTTMode();
