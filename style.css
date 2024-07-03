@@ -41,6 +41,11 @@ video {
     width: 700px;
 }
 
+.button-group {
+    display: flex;
+    justify-content: space-between;
+}
+
 button {
     background: #333;
     color: white;
@@ -49,6 +54,7 @@ button {
     height: 30px;
     margin-top: 5px;
     cursor: pointer;
+    width: 49.5%;
 }
 
 button:hover {

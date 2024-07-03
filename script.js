@@ -22667,10 +22667,6 @@ async function createVTTMode() {
                     video.currentTime = parseFloat(wordSpan.dataset.offset);
                 });
 
-                wordSpan.addEventListener('input', () => {
-                    // Update Captions
-                });
-
                 paragraph.appendChild(wordSpan);
                 textSpanIndex++;
             }
@@ -22696,24 +22692,77 @@ toggleViewButton.addEventListener('click', () => {
 video.addEventListener('timeupdate', () => {
     const currentTime = video.currentTime;
     if (isTextMode) {
-        document.querySelectorAll('#textMode span').forEach(span => {
+        document.querySelectorAll('.text-container span').forEach(span => {
             const wordStart = parseFloat(span.dataset.offset);
             if (currentTime >= wordStart) {
                 span.classList.add('highlight');
                 span.classList.remove('not-highlighted');
+            } else {
+                span.classList.remove('highlight');
+                span.classList.add('not-highlighted');
             }
         });
     } else {
-        document.querySelectorAll('#vttMode span').forEach(span => {
+        document.querySelectorAll('.vtt-container span').forEach(span => {
             const wordStart = parseFloat(span.dataset.offset);
             if (currentTime >= wordStart) {
                 span.classList.add('highlight');
                 span.classList.remove('not-highlighted');
+            } else {
+                span.classList.remove('highlight');
+                span.classList.add('not-highlighted');
             }
         });
     }
 });
 
+// Update VTT content from VTT mode spans
+function generateUpdatedVTT() {
+    let updatedVTT = 'WEBVTT\n\n';
+    const paragraphs = vttContainer.querySelectorAll('p');
+    let sectionId = 1; // Start section ID from 1
+
+    paragraphs.forEach(paragraph => {
+        const header = paragraph.previousElementSibling;
+        const startEndTime = header.textContent.split(' - ');
+        const startTime = startEndTime[0];
+        const endTime = startEndTime[1];
+        const words = [];
+
+        paragraph.querySelectorAll('span').forEach(span => {
+            words.push(span.textContent.trim());
+        });
+
+        updatedVTT += `${sectionId}\n${startTime} --> ${endTime}\n${words.join(' ')}\n\n`;
+        sectionId++;
+    });
+
+    return updatedVTT;
+}
+
+// Update the video track with the new VTT content
+function updateVideoTrack() {
+    const updatedVTTContent = generateUpdatedVTT();
+    console.log(updatedVTTContent);
+    const blob = new Blob([updatedVTTContent], { type: 'text/vtt' });
+    const url = URL.createObjectURL(blob);
+    
+    let track = video.querySelector('track');
+    if (track) {
+        track.src = url;
+    } else {
+        track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.src = url;
+        track.default = true;
+        video.appendChild(track);
+    }
+}
+
 // Initial content creation
 createTextMode();
 createVTTMode();
+
+// Download VTT button event listener
+const downloadVTTButton = document.getElementById('downloadVTT');
+downloadVTTButton.addEventListener('click', updateVideoTrack);
