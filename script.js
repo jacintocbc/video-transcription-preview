@@ -22691,29 +22691,17 @@ toggleViewButton.addEventListener('click', () => {
 // Highlight words as video plays
 video.addEventListener('timeupdate', () => {
     const currentTime = video.currentTime;
-    if (isTextMode) {
-        document.querySelectorAll('.text-container span').forEach(span => {
-            const wordStart = parseFloat(span.dataset.offset);
-            if (currentTime >= wordStart) {
-                span.classList.add('highlight');
-                span.classList.remove('not-highlighted');
-            } else {
-                span.classList.remove('highlight');
-                span.classList.add('not-highlighted');
-            }
-        });
-    } else {
-        document.querySelectorAll('.vtt-container span').forEach(span => {
-            const wordStart = parseFloat(span.dataset.offset);
-            if (currentTime >= wordStart) {
-                span.classList.add('highlight');
-                span.classList.remove('not-highlighted');
-            } else {
-                span.classList.remove('highlight');
-                span.classList.add('not-highlighted');
-            }
-        });
-    }
+    const container = isTextMode ? '.text-container' : '.vtt-container';
+    document.querySelectorAll(`${container} span`).forEach(span => {
+        const wordStart = parseFloat(span.dataset.offset);
+        if (currentTime >= wordStart) {
+            span.classList.add('highlight');
+            span.classList.remove('not-highlighted');
+        } else {
+            span.classList.remove('highlight');
+            span.classList.add('not-highlighted');
+        }
+    });
 });
 
 // Update VTT content from VTT mode spans
@@ -22733,8 +22721,34 @@ function generateUpdatedVTT() {
             words.push(span.textContent.trim());
         });
 
-        updatedVTT += `${sectionId}\n${startTime} --> ${endTime}\n${words.join(' ')}\n\n`;
-        sectionId++;
+        let sectionText = '';
+        let lineLength = 0;
+        let sectionLength = 0;
+
+        words.forEach(word => {
+            if (sectionLength + word.length > 80 || lineLength + word.length > 30) {
+                if (sectionLength + word.length > 80) {
+                    updatedVTT += `${sectionId}\n${startTime} --> ${endTime}\n${sectionText.trim()}\n\n`;
+                    sectionText = '';
+                    sectionLength = 0;
+                    sectionId++;
+                }
+                
+                if (lineLength + word.length > 35) {
+                    sectionText += '\n';
+                    lineLength = 0;
+                }
+            }
+
+            sectionText += word + ' ';
+            lineLength += word.length + 1;
+            sectionLength += word.length + 1;
+        });
+
+        if (sectionText.trim().length > 0) {
+            updatedVTT += `${sectionId}\n${startTime} --> ${endTime}\n${sectionText.trim()}\n\n`;
+            sectionId++;
+        }
     });
 
     return updatedVTT;
@@ -22743,7 +22757,6 @@ function generateUpdatedVTT() {
 // Update the video track with the new VTT content
 function updateVideoTrack() {
     const updatedVTTContent = generateUpdatedVTT();
-    console.log(updatedVTTContent);
     const blob = new Blob([updatedVTTContent], { type: 'text/vtt' });
     const url = URL.createObjectURL(blob);
     
